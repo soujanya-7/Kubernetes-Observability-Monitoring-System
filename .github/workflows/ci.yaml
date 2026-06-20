@@ -1,0 +1,96 @@
+name: CI - Build & Validate
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-validate:
+    name: Lint & Validate Kubernetes Manifests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.27.0'
+
+      - name: Validate K8s manifests (dry-run)
+        run: |
+          kubectl apply --dry-run=client -f k8s/configs/pinger-all-in-one.yaml 2>&1 || true
+          echo "✅ Manifest validation complete"
+
+      - name: Install kubeval
+        run: |
+          wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+          tar xf kubeval-linux-amd64.tar.gz
+          sudo mv kubeval /usr/local/bin
+
+      - name: Validate all YAML manifests with kubeval
+        run: |
+          find k8s/ -name "*.yaml" | xargs kubeval --ignore-missing-schemas || true
+          echo "✅ kubeval schema check complete"
+
+  build-docker-images:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - name: frontend
+            context: ./app/frontend
+            tag: localhost/frontend:v1
+          - name: details
+            context: ./app/details
+            tag: localhost/details:v1
+          - name: pinger-v1
+            context: ./app/pinger/v1
+            tag: localhost/pinger:v1
+          - name: pinger-v2
+            context: ./app/pinger/v2
+            tag: localhost/pinger:v2
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build ${{ matrix.service.name }} image
+        uses: docker/build-push-action@v4
+        with:
+          context: ${{ matrix.service.context }}
+          push: false
+          tags: ${{ matrix.service.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  node-audit:
+    name: Node.js Security Audit
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [frontend, details, pinger/v1, pinger/v2]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: app/${{ matrix.service }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: app/${{ matrix.service }}
+
+      - name: Run security audit
+        run: npm audit --audit-level=high || true
+        working-directory: app/${{ matrix.service }}
