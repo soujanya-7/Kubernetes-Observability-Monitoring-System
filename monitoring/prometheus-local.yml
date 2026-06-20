@@ -1,0 +1,28 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'frontend'
+    static_configs:
+      - targets: ['frontend:9000']
+    metrics_path: '/metrics'
+
+  - job_name: 'details'
+    static_configs:
+      - targets: ['details:4000']
+    metrics_path: '/metrics'
+
+  - job_name: 'pinger-v1'
+    static_configs:
+      - targets: ['pinger-v1:3000']
+    metrics_path: '/metrics'
+
+  - job_name: 'pinger-v2'
+    static_configs:
+      - targets: ['pinger-v2:3000']
+    metrics_path: '/metrics'

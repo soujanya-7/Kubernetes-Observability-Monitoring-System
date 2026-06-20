@@ -1,0 +1,115 @@
+version: '3.8'
+
+# Local development stack — mirrors the Kubernetes deployment
+# Usage: docker-compose up --build
+
+services:
+  frontend:
+    build:
+      context: ./app/frontend
+      dockerfile: Dockerfile
+    image: localhost/frontend:v1
+    container_name: pinger-frontend
+    ports:
+      - "9000:9000"
+    environment:
+      - PINGER_BASE_URL=http://pinger-v1:3000
+      - DETAILS_BASE_URL=http://details:4000
+    depends_on:
+      pinger-v1:
+        condition: service_healthy
+      details:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pinger-network
+
+  details:
+    build:
+      context: ./app/details
+      dockerfile: Dockerfile
+    image: localhost/details:v1
+    container_name: pinger-details
+    ports:
+      - "4000:4000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pinger-network
+
+  pinger-v1:
+    build:
+      context: ./app/pinger/v1
+      dockerfile: Dockerfile
+    image: localhost/pinger:v1
+    container_name: pinger-v1
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pinger-network
+
+  pinger-v2:
+    build:
+      context: ./app/pinger/v2
+      dockerfile: Dockerfile
+    image: localhost/pinger:v2
+    container_name: pinger-v2
+    ports:
+      - "3001:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - pinger-network
+
+  # Prometheus for local monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: pinger-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus-local.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=7d'
+    networks:
+      - pinger-network
+
+  # Grafana for local dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: pinger-grafana
+    ports:
+      - "3002:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - pinger-network
+
+networks:
+  pinger-network:
+    driver: bridge
+
+volumes:
+  grafana-data:
