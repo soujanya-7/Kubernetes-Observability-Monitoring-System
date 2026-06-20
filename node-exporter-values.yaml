@@ -1,0 +1,10 @@
+hostPort: false
+hostNetwork: false
+
+podAnnotations:
+  sidecar.istio.io/inject: "false"
+
+service:
+  port: 9100
+  targetPort: 9100
+
