@@ -1,183 +1,218 @@
-# K8s Learnathon // Kubernetes and Microservices
-Simple microservice boilerplate.
+# 🔭 Kubernetes Observability & Monitoring System
 
-## Description
-Pinger is an app which continuously calls any URL, to check if it's up or not. 
-It also records the latency, response code, size etc.
+![CI](https://github.com/soujanya-7/Kubernetes-Observability-Monitoring-System/actions/workflows/ci.yaml/badge.svg)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-1.27-blue?logo=kubernetes)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker)
+![Prometheus](https://img.shields.io/badge/Prometheus-monitored-E6522C?logo=prometheus)
+![Grafana](https://img.shields.io/badge/Grafana-dashboard-F46800?logo=grafana)
+![Node.js](https://img.shields.io/badge/Node.js-18-339933?logo=node.js)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-This app has 3 services:
+A production-grade microservices observability system deployed on Kubernetes, featuring real-time URL uptime monitoring, latency tracking, and full metrics visibility via Prometheus + Grafana.
 
- - `frontend` - which provides the UI, and calls different APIs
- - `pinger` - runs a loop and calls the list of URLs provided by the UI and records all stats
- - `details` - service which providers more details about a URL
+---
 
-## Getting Started
+## 📐 Architecture
 
-Start by installing a local kubernetes cluster using `kind`: https://kind.sigs.k8s.io/
-
-### Setting up Local K8s Cluster
-A sample cluster configuration can be found in: `k8s/cluster/kind-cluster-config.yaml`
-
-This creates a 3 node cluster along with a control plane.
-
-Example:
- 
 ```
- kind create cluster --config k8s/cluster/kind-cluster-config.yaml
-Creating cluster "kind" ...
- ✓ Ensuring node image (kindest/node:v1.20.2) 🖼
- ✓ Preparing nodes 📦 📦 📦 📦
- ✓ Writing configuration 📜
- ✓ Starting control-plane 🕹️
- ✓ Installing CNI 🔌
- ✓ Installing StorageClass 💾
- ✓ Joining worker nodes 🚜
-Set kubectl context to "kind-kind"
-You can now use your cluster with:
-
-kubectl cluster-info --context kind-kind
-
-Have a question, bug, or feature request? Let us know! https://kind.sigs.k8s.io/#community 🙂
+┌─────────────────────────────────────────────────────────────┐
+│                        kind Cluster                          │
+│                                                             │
+│  ┌──────────────┐    ┌──────────────┐  ┌───────────────┐   │
+│  │   Frontend   │───▶│  Pinger v1   │  │  Prometheus   │   │
+│  │  :9000       │    │  :3000       │  │  :9090        │   │
+│  │  (Express)   │───▶│  Pinger v2   │  │               │   │
+│  │              │    │  :3000       │  └──────┬────────┘   │
+│  │              │───▶│  Details     │         │            │
+│  └──────────────┘    │  :4000       │  ┌──────▼────────┐   │
+│                      └──────────────┘  │    Grafana    │   │
+│                             │          │  :3000        │   │
+│                      /metrics exposed  └───────────────┘   │
+│                      (prom-client)                          │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-Check using:
- 
-```
-$ kubectl get no --context kind-kind
-NAME                 STATUS   ROLES                  AGE     VERSION
-kind-control-plane   Ready    control-plane,master   2m50s   v1.20.2
-kind-worker          Ready    <none>                 2m16s   v1.20.2
-kind-worker2         Ready    <none>                 2m16s   v1.20.2
-kind-worker3         Ready    <none>                 2m16s   v1.20.2
-```
+---
 
-### Building Docker Images
-Now, that you have a cluster running...
-Let's build the application and load the images into the cluster.
+## 🛠️ Tech Stack
 
-`./scripts/build-docker.sh` - This script build and uploads the images to the kind cluster.
+| Layer | Technology |
+|---|---|
+| **Orchestration** | Kubernetes (kind) |
+| **Containerization** | Docker |
+| **Services** | Node.js + Express.js |
+| **Metrics** | Prometheus + prom-client |
+| **Dashboards** | Grafana |
+| **Proxy** | Envoy |
+| **CI/CD** | GitHub Actions |
 
-Now, if you want to do it yourself, follow this [guide](https://kind.sigs.k8s.io/docs/user/quick-start/#loading-an-image-into-your-cluster)
+---
 
-### Deploying Application
-Check the sample deployment configuration. This has basic k8s deployment and service spec. 
-`k8s/configs/pinger-all-in-one.yaml`
+## 📦 Microservices
 
+### `frontend` (port 9000)
+- Serves the HTML UI
+- Acts as an API gateway, proxying calls to pinger and details
+- Exposes `/metrics` endpoint for Prometheus scraping
 
-Example:
- 
-```
-$ kubectl apply -f k8s/configs/pinger-all-in-one.yaml
-deployment.apps/frontend created
-service/frontend-service created
-deployment.apps/details created
-service/details-service created
-deployment.apps/pinger-v1 created
-service/pinger-v1-service created
-deployment.apps/pinger-v2 created
-service/pinger-v2-service created
-```
-Verify if everything was successfully created.
+### `pinger-v1` (port 3000)
+- Continuously polls a configurable list of URLs every 5 seconds
+- Records latency, HTTP status, success/fail counts
+- Tracks state in-memory with SHA-256 URL hashing
 
+### `pinger-v2` (port 3000)
+- Improved async version of pinger-v1
+- Exposes custom Prometheus counters: `pinger_success_total`, `pinger_fail_total`
+- Full `async/await` implementation with proper error handling
 
-Check pods:
- 
-```
-$ kubectl get pods
-NAME                         READY   STATUS    RESTARTS   AGE
-details-77498f8c7d-gvqcm     1/1     Running   0          10m
-frontend-7486854785-4rpm4    1/1     Running   0          10m
-pinger-v1-7bcc658775-ftbfs   1/1     Running   0          10m
-pinger-v2-fff76cdc-85j5j     1/1     Running   0          10m
-```
+### `details` (port 4000)
+- Returns metadata for a given URL (content-type, server header, status)
 
+---
 
-Check services:
- 
-```
-$ kubectl get svc 
-NAME                TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
-details-service     ClusterIP   10.96.242.219   <none>        4000/TCP   10m
-frontend-service    ClusterIP   10.96.111.87    <none>        9000/TCP   10m
-kubernetes          ClusterIP   10.96.0.1       <none>        443/TCP    72m
-pinger-v1-service   ClusterIP   10.96.10.155    <none>        3000/TCP   10m
-pinger-v2-service   ClusterIP   10.96.152.94    <none>        3000/TCP   10m
+## 🚀 Getting Started
+
+### Prerequisites
+- [Docker](https://docs.docker.com/get-docker/)
+- [kind](https://kind.sigs.k8s.io/) (Kubernetes in Docker)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
+
+---
+
+### Option 1 — Local Dev with Docker Compose
+
+```bash
+# Start all services + Prometheus + Grafana locally
+docker-compose up --build
+
+# Access:
+# UI         → http://localhost:9000
+# Prometheus → http://localhost:9090
+# Grafana    → http://localhost:3002  (admin / admin)
 ```
 
+---
 
-Check deployments:
- 
-```
-$ kubectl get deploy
-NAME        READY   UP-TO-DATE   AVAILABLE   AGE
-details     1/1     1            1           11m
-frontend    1/1     1            1           11m
-pinger-v1   1/1     1            1           11m
-pinger-v2   1/1     1            1           11m
+### Option 2 — Full Kubernetes Deployment (kind)
+
+#### 1. Create the cluster
+```bash
+kind create cluster --config k8s/cluster/kind-cluster-config.yaml
 ```
 
-### Checking Application
-
-Let's expose the application locally and check if things are working together correctly.
-
-Get the pod name for `frontend`:
- 
-```
-$ kubectl get po | grep frontend
-frontend-7486854785-4rpm4    1/1     Running   0          13m
+#### 2. Build & load Docker images
+```bash
+./scripts/build-docker.sh
 ```
 
-Let's forward this to the local machine:
- 
-```
-$ kubectl port-forward frontend-7486854785-4rpm4 9000:9000
-Forwarding from 127.0.0.1:9000 -> 9000
-Forwarding from [::1]:9000 -> 9000
+#### 3. Deploy all services
+```bash
+kubectl apply -f k8s/configs/pinger-all-in-one.yaml
 ```
 
-Now open you browser: http://localhost:9000
-You should be able to see the page.
+#### 4. Deploy monitoring stack
+```bash
+# Create monitoring namespace
+kubectl create namespace monitoring
 
-Here, we used `kubectl port-forward <pod-name> <local-port>:<remote-port>` to forward local connections
-to the container running in the cluster. 
-
-### Application Structure
-Here, the `frontend` pod calls the `pinger` and `details` service. 
-
-`frontend` service's deployment configuration has the following environment variable:
- 
-```
-      containers:
-      - name: frontend
-        image: localhost/frontend:v1
-        env:
-        - name: PINGER_BASE_URL
-          value: "http://pinger-v1-service:3000"
-        - name: DETAILS_BASE_URL
-          value: "http://details-service:4000"
-        ports:
-```
- 
-In the sample configuration, they are calling the service names configured for the other deployments.
-Thus, the frontend, inside k8s, will use these internal DNS names to access `pinger` and `details` service.
-
-These variables can be changed to point to the correct services. 
-If one of the services isn't working as expected,
-the UI would show error messages. You can try this by deleting some service or deployment.
-
-
-### Checking logs
-For checking logs of a pod, use:
-`kubectl logs -f <pod-name>`
-
-Example:
- 
-```
-$ kubectl logs -f frontend-7486854785-4rpm4
-2021-05-06T22:05:29.573Z | Frontend listening at: 9000
-::ffff:172.18.0.3 - - [06/May/2021:22:14:25 +0000] "GET / HTTP/1.1" 200 6351 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36"
+# Apply RBAC, Prometheus and Grafana
+kubectl apply -f k8s/monitoring/prometheus-rbac.yaml
+kubectl apply -f k8s/monitoring/prometheus-config.yaml
+kubectl apply -f k8s/monitoring/prometheus-deploy.yaml
+kubectl apply -f k8s/monitoring/prometheus-service.yaml
+kubectl apply -f k8s/monitoring/grafana-service.yaml
 ```
 
-### Kubectl Reference
-https://kubernetes.io/docs/reference/kubectl/cheatsheet/
+#### 5. Verify everything is running
+```bash
+kubectl get pods
+kubectl get svc
+kubectl get deploy
+```
 
+#### 6. Access the UI
+```bash
+# Get the frontend pod name
+kubectl get po | grep frontend
+
+# Forward port
+kubectl port-forward <frontend-pod-name> 9000:9000
+
+# Open http://localhost:9000
+```
+
+---
+
+## 📊 Observability
+
+### Prometheus Metrics
+Each service exposes `/metrics` via `prom-client`:
+
+| Metric | Description | Service |
+|---|---|---|
+| `http_request_duration_ms` | HTTP request latency histogram | pinger-v1 |
+| `pinger_success_total` | Counter of successful pings | pinger-v2 |
+| `pinger_fail_total` | Counter of failed pings | pinger-v2 |
+| `nodejs_heap_size_used_bytes` | Node.js heap memory | all |
+| `process_cpu_seconds_total` | CPU usage | all |
+
+### Grafana Dashboard
+Import `monitoring/grafana-dashboard.json` into Grafana for:
+- 📈 Success vs Failure ping rate (per minute)
+- ⏱️ HTTP request duration across all services
+- 🧠 Node.js heap memory per pod
+- 📉 Failure rate percentage with color thresholds
+
+---
+
+## 🔁 CI/CD Pipeline
+
+GitHub Actions runs on every push and pull request:
+
+| Job | Description |
+|---|---|
+| `lint-and-validate` | Validates all K8s YAML manifests using kubeval |
+| `build-docker-images` | Builds all 4 Docker images in parallel matrix |
+| `node-audit` | Runs `npm audit` security check on all services |
+
+---
+
+## 📁 Project Structure
+
+```
+.
+├── app/
+│   ├── frontend/          # Express.js UI + API gateway
+│   ├── details/           # URL metadata service
+│   └── pinger/
+│       ├── v1/            # Basic pinger with histogram metrics
+│       └── v2/            # Async pinger with success/fail counters
+├── k8s/
+│   ├── cluster/           # kind cluster config
+│   ├── configs/           # Deployment + Service YAML for all apps
+│   └── monitoring/        # Prometheus RBAC, ConfigMap, Deployment
+├── monitoring/
+│   ├── prometheus-local.yml   # Local Prometheus config (docker-compose)
+│   └── grafana-dashboard.json # Grafana dashboard export
+├── scripts/
+│   └── build-docker.sh    # Build & load images into kind
+├── .github/workflows/
+│   └── ci.yaml            # GitHub Actions CI pipeline
+└── docker-compose.yml     # Local dev stack
+```
+
+---
+
+## 🔍 Key Design Decisions
+
+- **Two pinger versions** — v1 uses synchronous-style callbacks, v2 is fully async with richer metrics. This demonstrates API evolution.
+- **Pod annotations** — All pods use `prometheus.io/scrape: "true"` so Prometheus auto-discovers them via Kubernetes SD.
+- **RBAC** — Prometheus runs with a dedicated ServiceAccount with read-only access to pods, services, and endpoints.
+- **Resource limits** — All pods have CPU/memory requests and limits to prevent noisy-neighbour issues in the cluster.
+- **Health probes** — Liveness and readiness probes ensure traffic is only routed to healthy pods.
+
+---
+
+## 📄 License
+
+MIT © 2024
