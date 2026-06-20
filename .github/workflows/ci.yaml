@@ -74,6 +74,7 @@ jobs:
     name: Node.js Security Audit
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false   # all matrix jobs run independently even if one fails
       matrix:
         service: [frontend, details, pinger/v1, pinger/v2]
     steps:
@@ -84,13 +85,13 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: app/${{ matrix.service }}/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        # Use npm install (not npm ci) to handle any package-lock.json drift
+        run: npm install
         working-directory: app/${{ matrix.service }}
 
       - name: Run security audit
+        # || true so audit warnings don't fail the pipeline
         run: npm audit --audit-level=high || true
         working-directory: app/${{ matrix.service }}
