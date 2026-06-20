@@ -1,7 +1,7 @@
 #! /bin/bash
 set -e
 
-echo "Removing imgaes if any..."
+echo "Removing images if any..."
 docker rmi -f localhost/details:v1
 docker rmi -f localhost/frontend:v1
 docker rmi -f localhost/pinger:v1

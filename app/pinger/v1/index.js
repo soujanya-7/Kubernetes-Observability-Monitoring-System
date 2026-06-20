@@ -5,6 +5,8 @@ const pi = require('./pinger'); // Your existing ping logic
 const app = express();
 const port = 3000;
 
+app.use(express.json());
+
 // ------------------ Prometheus metrics ------------------
 const collectDefaultMetrics = client.collectDefaultMetrics;
 collectDefaultMetrics({ timeout: 5000 });

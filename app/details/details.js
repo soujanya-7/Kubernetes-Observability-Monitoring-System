@@ -30,6 +30,7 @@ const fetchUrlInfo = (url) => {
       } else {
         res.status = -1;
       }
+      return res;
     });
 }
 

@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: frontend:v2
+        image: localhost/frontend:v1
         env:
         - name: PINGER_BASE_URL
           value: "http://pinger-v1-service:3000"
@@ -74,7 +74,7 @@ spec:
     spec:
       containers:
       - name: details
-        image: details:v2
+        image: localhost/details:v1
         ports:
         - containerPort: 4000
         imagePullPolicy: Never
@@ -122,7 +122,7 @@ spec:
     spec:
       containers:
       - name: pinger
-        image: pinger-v1:v1
+        image: localhost/pinger:v1
         ports:
         - containerPort: 3000
         imagePullPolicy: Never
@@ -171,7 +171,7 @@ spec:
     spec:
       containers:
       - name: pinger
-        image: pinger-v2:v2
+        image: localhost/pinger:v2
         ports:
         - containerPort: 3000
         imagePullPolicy: Never
@@ -190,9 +190,5 @@ spec:
   - name: http
     port: 3000
     targetPort: 3000
-
-
-Select * from ECE where name = 'Vivek
-
 
 

@@ -78,7 +78,7 @@ spec:
         app: envoy-proxy-frontend
       annotations:
         prometheus.io/scrape: 'true'
-        prometheus.io/port: '9901'
+        prometheus.io/port: '8081'
         prometheus.io/path: '/stats/prometheus'
     spec:
       containers:

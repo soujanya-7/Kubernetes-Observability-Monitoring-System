@@ -300,10 +300,10 @@ data:
         - __meta_kubernetes_service_annotation_prometheus_io_probe
     - job_name: 'frontend'
       static_configs:
-        - targets: ['frontend-service.default.svc.cluster.local:80']
+        - targets: ['frontend-service.default.svc.cluster.local:9000']
     - job_name: 'details'
       static_configs:
-        - targets: ['details.default.svc.cluster.local:9080']
+        - targets: ['details-service.default.svc.cluster.local:4000']
     - job_name: 'pinger-v1'
       static_configs:
         - targets: ['pinger-v1-service.default.svc.cluster.local:3000']
