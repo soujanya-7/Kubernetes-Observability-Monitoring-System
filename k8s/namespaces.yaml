@@ -1,0 +1,19 @@
+---
+# Namespace for application workloads
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pinger
+  labels:
+    app.kubernetes.io/managed-by: kubectl
+    environment: production
+
+---
+# Namespace for monitoring stack
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    app.kubernetes.io/managed-by: kubectl
+    purpose: observability
