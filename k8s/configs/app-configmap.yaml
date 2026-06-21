@@ -1,0 +1,28 @@
+# -----------------------------------------------
+# ConfigMap — Centralised app configuration
+# Follows 12-factor app methodology:
+# config is stored in the environment, not in code
+# -----------------------------------------------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pinger-app-config
+  namespace: default
+  labels:
+    app.kubernetes.io/part-of: pinger
+data:
+  # URLs to monitor — comma-separated list
+  # Can be updated at runtime via: kubectl edit configmap pinger-app-config
+  PING_URLS: "https://google.com,https://api.nasa.gov,https://juspay.in"
+
+  # How often the pinger runs (in milliseconds)
+  PING_INTERVAL_MS: "5000"
+
+  # Timeout for each outbound ping request (ms)
+  PING_TIMEOUT_MS: "5000"
+
+  # Log level: debug | info | warn | error
+  LOG_LEVEL: "info"
+
+  # Prometheus scrape path
+  METRICS_PATH: "/metrics"
