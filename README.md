@@ -10,6 +10,9 @@
 
 A production-grade microservices observability system deployed on Kubernetes, featuring real-time URL uptime monitoring, latency tracking, and full metrics visibility via Prometheus + Grafana.
 
+> 📖 Want to contribute? See [CONTRIBUTING.md](./CONTRIBUTING.md)
+
+
 ---
 
 ## 📐 Architecture
@@ -182,34 +185,62 @@ GitHub Actions runs on every push and pull request:
 ```
 .
 ├── app/
-│   ├── frontend/          # Express.js UI + API gateway
-│   ├── details/           # URL metadata service
+│   ├── frontend/              # Express.js UI + API gateway
+│   ├── details/               # URL metadata service
 │   └── pinger/
-│       ├── v1/            # Basic pinger with histogram metrics
-│       └── v2/            # Async pinger with success/fail counters
+│       ├── v1/                # Basic pinger with histogram metrics
+│       └── v2/                # Async pinger with success/fail counters
 ├── k8s/
-│   ├── cluster/           # kind cluster config
-│   ├── configs/           # Deployment + Service YAML for all apps
-│   └── monitoring/        # Prometheus RBAC, ConfigMap, Deployment
+│   ├── cluster/               # kind cluster config (1 control-plane + 3 workers)
+│   ├── namespaces.yaml        # Namespace definitions
+│   └── configs/
+│       ├── pinger-all-in-one.yaml   # All app Deployments + Services
+│       ├── hpa.yaml                 # HorizontalPodAutoscaler (autoscaling)
+│       ├── network-policy.yaml      # Zero-trust NetworkPolicies
+│       └── app-configmap.yaml       # Centralised app config (12-factor)
+│   └── monitoring/
+│       ├── prometheus-rbac.yaml         # ServiceAccount + ClusterRole
+│       ├── prometheus-config.yaml       # Prometheus scrape config + SD
+│       ├── prometheus-alert-rules.yaml  # Alerting rules (6 alerts)
+│       ├── prometheus-deploy.yaml       # Prometheus Deployment + Service
+│       └── grafana-service.yaml         # Grafana Service
 ├── monitoring/
-│   ├── prometheus-local.yml   # Local Prometheus config (docker-compose)
-│   └── grafana-dashboard.json # Grafana dashboard export
+│   ├── prometheus-local.yml       # Prometheus config for docker-compose
+│   └── grafana-dashboard.json     # Grafana dashboard export (importable)
 ├── scripts/
-│   └── build-docker.sh    # Build & load images into kind
+│   └── build-docker.sh            # Build + load all images into kind
 ├── .github/workflows/
-│   └── ci.yaml            # GitHub Actions CI pipeline
-└── docker-compose.yml     # Local dev stack
+│   └── ci.yaml                    # GitHub Actions CI pipeline
+├── docker-compose.yml             # Full local dev stack
+├── Makefile                       # One-command developer workflow
+├── CONTRIBUTING.md                # Contribution guide
+└── README.md
 ```
 
 ---
 
-## 🔍 Key Design Decisions
+## ⚡ Quick Commands
 
-- **Two pinger versions** — v1 uses synchronous-style callbacks, v2 is fully async with richer metrics. This demonstrates API evolution.
-- **Pod annotations** — All pods use `prometheus.io/scrape: "true"` so Prometheus auto-discovers them via Kubernetes SD.
-- **RBAC** — Prometheus runs with a dedicated ServiceAccount with read-only access to pods, services, and endpoints.
-- **Resource limits** — All pods have CPU/memory requests and limits to prevent noisy-neighbour issues in the cluster.
-- **Health probes** — Liveness and readiness probes ensure traffic is only routed to healthy pods.
+```bash
+make help              # Show all available commands
+make compose-up        # Start everything locally with docker-compose
+make cluster-up        # Create kind cluster
+make load              # Build + load Docker images
+make deploy            # Deploy all K8s services
+make deploy-monitoring # Deploy Prometheus + Grafana
+make status            # View pods, services, HPA at once
+make port-forward      # Access UI at http://localhost:9000
+make clean             # Tear down everything
+```
+
+---
+
+## 🔒 Security
+
+- **NetworkPolicy**: Default-deny-all with explicit allow rules between pods
+- **RBAC**: Prometheus uses a dedicated ServiceAccount with read-only access
+- **No secrets in git**: `.env` and `*-secret.yaml` files are gitignored
+- **Resource limits**: All pods have CPU/memory limits to prevent resource exhaustion
 
 ---
 
